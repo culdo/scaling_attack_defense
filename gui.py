@@ -1,6 +1,8 @@
 import tkinter as tk
+from threading import Thread
 from tkinter import filedialog
 
+import cv2
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 # Implement the default Matplotlib key bindings.
@@ -9,6 +11,8 @@ from matplotlib.figure import Figure
 
 import numpy as np
 
+from defense import AttackDefense
+
 
 class DemoGUI(tk.Frame):
     def __init__(self, master=None):
@@ -16,37 +20,41 @@ class DemoGUI(tk.Frame):
         self.master = master
         self.master.title("對縮放攻擊的防禦GUI by Jun Hu")
         self.pack()
-        self.create_widgets()
-
-        self.canvas.mpl_connect("key_press_event", self.on_key_press)
-
-    def on_key_press(self, event):
-        print("you pressed {}".format(event.key))
-        key_press_handler(event, self.canvas, self.toolbar)
+        self._create_widgets()
 
     def onOpen(self):
-        self.filename = filedialog.askopenfilename()
+        filename = filedialog.askopenfilename()
+        if filename:
+            size = tuple(map(int, self.size_var.get().split("x")))
+            self.atkdfn.load_img(filename)
+            self.atkdfn.run(size)
+            self.canvas.draw()
 
-    def create_widgets(self):
+    def _create_widgets(self):
+        self.size_var=tk.StringVar()
 
-        button = tk.Button(self, text="餵圖片喇", command=self.onOpen)
+        button = tk.Button(self, text="餵圖片喇", fg="blue", command=self.onOpen)
         button.pack(side="top")
+        frame = tk.Frame(self)
+        frame.pack(side="top")
+        name_label = tk.Label(frame, text='欲防禦之攻擊大小')
+        name_label.pack(side="left")
+        size_entry = tk.Entry(frame, textvariable=self.size_var)
+        size_entry.pack(side="left")
+        size_entry.insert(0, "258x258")
 
-        fig = Figure(figsize=(5, 4), dpi=100)
-        t = np.arange(0, 3, .01)
-        fig.add_subplot(111).plot(t, 2 * np.sin(2 * np.pi * t))
+        fig = Figure(figsize=(20, 4))
+        self.atkdfn = AttackDefense("jb.jpg", fig)
+        self.atkdfn.run((258, 258))
 
         self.canvas = FigureCanvasTkAgg(fig, self)  # A tk.DrawingArea.
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side="top", fill=tk.BOTH, expand=1)
 
-        self.toolbar = NavigationToolbar2Tk(self.canvas, self)
-        self.toolbar.update()
-        self.canvas.get_tk_widget().pack(side="top", fill=tk.BOTH, expand=1)
-
         self.quit = tk.Button(self, text="離開啊 哪次不離開", fg="red",
                               command=self.master.destroy)
         self.quit.pack(side="bottom")
+
 
 if __name__ == '__main__':
     root = tk.Tk()
